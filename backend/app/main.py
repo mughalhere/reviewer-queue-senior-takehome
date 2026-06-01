@@ -3,16 +3,22 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.workflow import (
+    ReviewAction,
+    WorkflowError,
+    allowed_actions,
+    apply_action,
+    is_active,
+    queue_sort_key,
+)
+
 
 DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "review_items.json"
-
-ReviewAction = Literal["claim", "approve", "reject", "escalate"]
 
 
 class ActionRequest(BaseModel):
@@ -39,6 +45,12 @@ def load_seed_items() -> list[dict]:
 ITEMS = load_seed_items()
 
 
+def _serialize(item: dict) -> dict:
+    payload = deepcopy(item)
+    payload["allowed_actions"] = allowed_actions(item)
+    return payload
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
@@ -48,43 +60,29 @@ async def health() -> dict:
 async def reset_items() -> dict:
     global ITEMS
     ITEMS = load_seed_items()
-    return {"items": deepcopy(ITEMS)}
+    return {"items": [_serialize(item) for item in ITEMS]}
 
 
 @app.get("/review-items")
 async def list_review_items(active_only: bool = True) -> dict:
-    items = deepcopy(ITEMS)
-
-    if active_only:
-        items = [item for item in items if item["status"] != "approved"]
-
-    items.sort(key=lambda item: item["submitted_at"], reverse=True)
-    return {"items": items}
+    items = [item for item in ITEMS if not active_only or is_active(item)]
+    items = sorted(items, key=queue_sort_key)
+    return {"items": [_serialize(item) for item in items]}
 
 
 @app.get("/review-items/{item_id}")
 async def get_review_item(item_id: str) -> dict:
-    item = find_item(item_id)
-    return {"item": deepcopy(item)}
+    return {"item": _serialize(find_item(item_id))}
 
 
 @app.post("/review-items/{item_id}/actions")
-async def apply_action(item_id: str, request: ActionRequest) -> dict:
+async def apply_review_action(item_id: str, request: ActionRequest) -> dict:
     item = find_item(item_id)
-
-    if request.action == "claim":
-        if item["status"] in {"approved", "rejected", "escalated"}:
-            raise HTTPException(status_code=409, detail="This item cannot be claimed")
-        item["status"] = "in_review"
-        item["assigned_reviewer"] = request.reviewer
-    elif request.action in {"approve", "reject", "escalate"}:
-        if item["status"] == "approved":
-            raise HTTPException(status_code=409, detail="This item has already been approved")
-        item["status"] = status_for_action(request.action)
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported action")
-
-    return {"item": deepcopy(item)}
+    try:
+        apply_action(item, request.action, request.reviewer)
+    except WorkflowError as err:
+        raise HTTPException(status_code=409, detail=err.message) from err
+    return {"item": _serialize(item)}
 
 
 def find_item(item_id: str) -> dict:
@@ -92,13 +90,3 @@ def find_item(item_id: str) -> dict:
         if item["id"] == item_id:
             return item
     raise HTTPException(status_code=404, detail="Review item not found")
-
-
-def status_for_action(action: ReviewAction) -> str:
-    if action == "approve":
-        return "approved"
-    if action == "reject":
-        return "rejected"
-    if action == "escalate":
-        return "escalated"
-    return "in_review"

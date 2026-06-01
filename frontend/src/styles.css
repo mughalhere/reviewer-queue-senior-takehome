@@ -116,6 +116,24 @@ h2 {
   background: #eef5ff;
 }
 
+.queue-item.mine {
+  border-left: 3px solid #4c7bd9;
+  padding-left: 11px;
+}
+
+.queue-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.queue-empty {
+  padding: 24px 16px;
+  color: #66758a;
+  text-align: center;
+}
+
 .queue-title {
   color: #162033;
   font-weight: 700;
@@ -124,6 +142,98 @@ h2 {
 .queue-meta {
   color: #5c6b7e;
   font-size: 13px;
+}
+
+.risk-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.risk-high {
+  background: #fde2dc;
+  color: #8b1d0f;
+}
+
+.risk-medium {
+  background: #fdebc7;
+  color: #8a5a07;
+}
+
+.risk-low {
+  background: #e1ecf9;
+  color: #284a7a;
+}
+
+.priority-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b4900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mine-tag {
+  display: inline-block;
+  border-radius: 4px;
+  background: #1e55bd;
+  padding: 1px 6px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mine-tag.inline {
+  margin-left: 6px;
+}
+
+.status-in_review {
+  background: #fff2cc;
+  color: #6b4900;
+}
+
+.status-unassigned {
+  background: #e1ecf9;
+  color: #284a7a;
+}
+
+.status-approved {
+  background: #d6efd9;
+  color: #1f5a2a;
+}
+
+.status-rejected {
+  background: #fde2dc;
+  color: #8b1d0f;
+}
+
+.status-escalated {
+  background: #f0d6f8;
+  color: #5a1e75;
+}
+
+.terminal-note {
+  margin-top: 14px;
+  color: #66758a;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.actions button.primary {
+  border-color: #1e55bd;
+  background: #1e55bd;
+  color: #fff;
+}
+
+.actions button.primary:hover:not(:disabled) {
+  background: #1746a3;
+  color: #fff;
 }
 
 .detail-panel {
