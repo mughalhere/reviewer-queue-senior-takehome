@@ -17,14 +17,33 @@ export interface ReviewItem {
   assigned_reviewer: string | null;
   notes_count: number;
   summary: string;
+  allowed_actions: ReviewAction[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function parseErrorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json();
+    if (body && typeof body.detail === "string") return body.detail;
+  } catch {
+    // ignore parse failure, fall through
+  }
+  return fallback;
+}
+
 export async function fetchReviewItems(): Promise<ReviewItem[]> {
   const response = await fetch(`${API_BASE_URL}/review-items`);
   if (!response.ok) {
-    throw new Error("Could not load review items");
+    throw new ApiError(response.status, await parseErrorDetail(response, "Could not load review items"));
   }
   const payload = await response.json();
   return payload.items;
@@ -44,7 +63,7 @@ export async function applyReviewAction(
   });
 
   if (!response.ok) {
-    throw new Error("Action failed");
+    throw new ApiError(response.status, await parseErrorDetail(response, "Action failed"));
   }
 
   const payload = await response.json();
